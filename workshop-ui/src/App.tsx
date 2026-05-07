@@ -425,7 +425,7 @@ function App() {
           </p>
           <a
             className="repo-link"
-            href="https://github.com/example-org/workshop-repo"
+            href="https://github.com/mangoshindig/twilio-iu-tech-summit-forge"
             target="_blank"
             rel="noreferrer"
             title="Opens in a new tab"
@@ -433,7 +433,7 @@ function App() {
           >
             Fork this repo
             <FiExternalLink />
-            <span className="link-meta">dummy link - replace before launch</span>
+            <span className="link-meta">https://github.com/mangoshindig/twilio-iu-tech-summit-forge</span>
           </a>
         </section>
 
