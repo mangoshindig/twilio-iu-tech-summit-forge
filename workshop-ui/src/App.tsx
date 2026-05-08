@@ -12,6 +12,7 @@ import {
   FiHelpCircle,
   FiHome,
   FiList,
+  FiPlayCircle,
   FiZap,
 } from 'react-icons/fi'
 import {
@@ -29,6 +30,7 @@ function App() {
   const [runtimeFlowError, setRuntimeFlowError] = useState<string | null>(null)
   const [activeNav, setActiveNav] = useState('overview')
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [activeVideo, setActiveVideo] = useState<{ title: string; embedUrl: string } | null>(null)
   const hasCelebratedCompletion = useRef(false)
 
   const trackFolder = selectedTrack === 'python' ? 'python' : 'typescript'
@@ -192,20 +194,39 @@ function App() {
     { id: 'judging', label: 'Judging Criteria', icon: FiZap },
   ]
 
-  const requiredModules = [
+  type WorkshopModule = {
+    name: string
+    description: string
+    href: string
+    whenToUse?: string
+    video?: {
+      title: string
+      embedUrl: string
+    }
+  }
+
+  const requiredModules: WorkshopModule[] = [
     {
       name: 'Twilio Agent Connect (TAC)',
       description: 'The core runtime for agent experiences in Conversations, including your callback flow in this starter.',
       href: 'https://www.twilio.com/docs/conversations/agent-connect',
+      video: {
+        title: 'Twilio Agent Connect overview',
+        embedUrl: 'https://www.youtube.com/embed/xTQU-Y-Btso',
+      },
     },
     {
       name: 'Conversation Orchestrator',
       description: 'Flow control layer for designing and routing conversation steps across channels and services.',
       href: 'https://www.twilio.com/docs/conversations/orchestrator',
+      video: {
+        title: 'Conversation Orchestrator overview',
+        embedUrl: 'https://www.youtube.com/embed/xZcIuobmgkg',
+      },
     },
   ]
 
-  const optionalModules = [
+  const optionalModules: WorkshopModule[] = [
     {
       name: 'Conversation Relay',
       description: 'Extend voice interactions with ConversationRelay for real-time conversational experiences.',
@@ -217,6 +238,10 @@ function App() {
       description: 'Add analysis signals and insights to improve routing, quality checks, and automation.',
       whenToUse: 'Use when teams want measurable quality signals and smarter decisioning.',
       href: 'https://www.twilio.com/docs/conversations/intelligence',
+      video: {
+        title: 'Conversation Intelligence overview',
+        embedUrl: 'https://www.youtube.com/embed/qzhWLKIOTAg',
+      },
     },
 
     {
@@ -224,6 +249,10 @@ function App() {
       description: 'Persist contextual state so assistants can retain relevant information across interactions.',
       whenToUse: 'Use when participants need continuity across turns or returning users.',
       href: 'https://www.twilio.com/docs/conversations/memory',
+      video: {
+        title: 'Conversation Memory overview',
+        embedUrl: 'https://www.youtube.com/embed/DPeFiBht0jc',
+      },
     },
     {
       name: 'Enterprise Knowledge',
@@ -517,6 +546,21 @@ Response format
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [showCompletionModal])
 
+  useEffect(() => {
+    if (!activeVideo) {
+      return
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveVideo(null)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [activeVideo])
+
   const openDocsNext = () => {
     setActiveNav('modules')
     setShowCompletionModal(false)
@@ -794,6 +838,15 @@ Response format
                     <span className="module-badge required">Required</span>
                   </div>
                   <p>{module.description}</p>
+                  {module.video ? (
+                    <button
+                      type="button"
+                      className="module-video-btn"
+                      onClick={() => setActiveVideo(module.video ?? null)}
+                    >
+                      <FiPlayCircle /> Watch video
+                    </button>
+                  ) : null}
                   <a
                     href={module.href}
                     target="_blank"
@@ -819,6 +872,15 @@ Response format
                   </div>
                   <p>{module.description}</p>
                   <p className="when-use">When to use: {module.whenToUse}</p>
+                  {module.video ? (
+                    <button
+                      type="button"
+                      className="module-video-btn"
+                      onClick={() => setActiveVideo(module.video ?? null)}
+                    >
+                      <FiPlayCircle /> Watch video
+                    </button>
+                  ) : null}
                   <a
                     href={module.href}
                     target="_blank"
@@ -940,6 +1002,33 @@ Response format
               <button type="button" className="modal-btn primary" onClick={openDocsNext}>
                 Open docs next
               </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {activeVideo ? (
+        <div className="video-modal-backdrop" role="presentation" onClick={() => setActiveVideo(null)}>
+          <section
+            className="video-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="video-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="video-modal-head">
+              <h3 id="video-modal-title">{activeVideo.title}</h3>
+              <button type="button" className="video-modal-close" onClick={() => setActiveVideo(null)} aria-label="Close video">
+                Close
+              </button>
+            </div>
+            <div className="video-frame-wrap">
+              <iframe
+                src={activeVideo.embedUrl}
+                title={activeVideo.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
             </div>
           </section>
         </div>
