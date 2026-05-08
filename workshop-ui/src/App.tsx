@@ -1,14 +1,18 @@
 import confetti from 'canvas-confetti'
 import { useEffect, useRef, useState } from 'react'
 import {
+  FiActivity,
   FiBookOpen,
   FiCheck,
   FiCheckSquare,
   FiCode,
   FiCommand,
   FiExternalLink,
+  FiFileText,
+  FiHelpCircle,
   FiHome,
   FiList,
+  FiZap,
 } from 'react-icons/fi'
 import {
   WORKSHOP_TWILIO_ACCOUNT_SID,
@@ -20,6 +24,9 @@ function App() {
   const [selectedTrack, setSelectedTrack] = useState<'python' | 'typescript'>('python')
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
   const [copiedDetailKey, setCopiedDetailKey] = useState<string | null>(null)
+  const [copiedPromptStarter, setCopiedPromptStarter] = useState(false)
+  const [runtimeFlowSvg, setRuntimeFlowSvg] = useState<string>('')
+  const [runtimeFlowError, setRuntimeFlowError] = useState<string | null>(null)
   const [activeNav, setActiveNav] = useState('overview')
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const hasCelebratedCompletion = useRef(false)
@@ -178,7 +185,11 @@ function App() {
 
     { id: 'tracks', label: 'Tracks', icon: FiList },
     { id: 'checklist', label: 'Checklist', icon: FiCheckSquare },
+    { id: 'runtime-flow', label: 'Runtime Flow', icon: FiActivity },
     { id: 'modules', label: 'Docs', icon: FiBookOpen },
+    { id: 'prompt-starter', label: 'Prompt Starter', icon: FiFileText },
+    { id: 'playbook', label: 'Common Issues', icon: FiHelpCircle },
+    { id: 'judging', label: 'Judging Criteria', icon: FiZap },
   ]
 
   const requiredModules = [
@@ -258,6 +269,137 @@ function App() {
       },
     ]
 
+  const runtimeFlowMermaid = `flowchart TD
+    A[User sends SMS or Voice input] --> B[Twilio routes request to TAC server endpoints]
+    B --> C[TAC runtime receives event]
+
+    C --> D{Channel type}
+    D -->|SMS| E[SMSChannel memoryMode always]
+    D -->|Voice enabled via TWILIO_VOICE_PUBLIC_DOMAIN| F[VoiceChannel memoryMode always]
+
+    E --> G[onMessageReady callback]
+    F --> G
+
+    G --> H[Read conversation session and profile traits]
+    H --> I[Read and use Conversation Memory response]
+    I --> J[Build prompt and call AI runtime]
+    J --> K[Generate response text]
+
+    K --> L[Estimate usage cost and update usage_by_conversation]
+    L --> M{Spend cap exceeded?}
+    M -->|Yes| N[Return spend cap reached message]
+    M -->|No| O[Return model response to TAC]
+
+    N --> P[Twilio sends response to end user]
+    O --> P
+
+    C --> Q[onConversationEnded callback]
+    Q --> R[Persist transcript and scoring]
+    R --> S[Clear in-memory usage state]
+
+    T[GET /health] --> U[Return ok teamId spendCap activeConversations tacSdk]
+
+    class A,B,P ext;
+    class C,D,E,F,G,H,K,L,M,N,O,Q,S,T,U done;
+    class I,J,R todo;
+
+    classDef done fill:#e9f8ef,stroke:#1f8f53,color:#0f4e2d,stroke-width:1.2px;
+    classDef todo fill:#fff4de,stroke:#b27400,color:#6d4600,stroke-width:1.2px;
+    classDef ext fill:#edf3ff,stroke:#2f6df6,color:#183c8f,stroke-width:1.2px;`
+
+  const promptStarterTemplate = `SYSTEM
+You are the Twilio + IU workshop assistant for TEAM_ID={{TEAM_ID}}.
+
+Personality and tone
+- Friendly, concise, and practical.
+- Explain trade-offs clearly and avoid jargon unless asked.
+
+Behavior rules
+- Ask one clarifying question if user intent is ambiguous.
+- Never invent account-specific facts.
+- If confidence is low, say what is missing and suggest a next action.
+
+Conversation context to use
+- Profile traits: firstName, preferredLanguage, customerTier.
+- Conversation Memory summary from previous turns.
+
+Escalation policy
+- Escalate to a human for billing disputes, security concerns, or repeated failed attempts.
+
+Response format
+- Keep replies under 5 sentences by default.
+- End with one actionable next step.`
+
+  const troubleshootingPlaybook = [
+    {
+      issue: 'No inbound webhook events are hitting your local app',
+      fix: 'Confirm ngrok is running, the HTTPS forwarding URL is current, and Messaging webhook on Conversation Configuration points to <NGROK_URL>/webhook.',
+    },
+    {
+      issue: 'Messages arrive twice or duplicate responses are sent',
+      fix: 'Remove legacy number-level messaging webhooks and keep only Conversation Configuration routing for messaging.',
+    },
+    {
+      issue: 'Voice path fails while SMS works',
+      fix: 'Set TWILIO_VOICE_PUBLIC_DOMAIN from ngrok host (without https://) and verify voice webhook points to <NGROK_URL>/twiml.',
+    },
+    {
+      issue: 'Starter runs but behavior stays TODO-like',
+      fix: 'Implement AI runtime logic in onMessageReady/handle_message_ready and add your prompt/personality instructions before returning response text.',
+    },
+  ]
+
+  const judgingRubric = [
+    {
+      section: '1) Functional baseline',
+      totalPoints: 30,
+      criteria: [
+        { item: 'SMS bot responds reliably', points: 10 },
+        { item: 'Correct webhook/event handling', points: 10 },
+        { item: 'End-to-end working demo', points: 10 },
+      ],
+    },
+    {
+      section: '2) Memory and profile use',
+      totalPoints: 25,
+      criteria: [
+        { item: 'Uses Conversation Memory retrieval', points: 10 },
+        { item: 'Uses profile trait in response logic', points: 10 },
+        { item: 'Context quality and relevance', points: 5 },
+      ],
+    },
+    {
+      section: '3) Voice stretch goal',
+      totalPoints: 15,
+      criteria: [
+        { item: 'Voice call path works', points: 10 },
+        { item: 'First-call voice response quality', points: 5 },
+      ],
+    },
+    {
+      section: '4) Safety and spend controls',
+      totalPoints: 20,
+      criteria: [
+        { item: 'Configurable spend cap implemented', points: 10 },
+        { item: 'Prompt safety or escalation behavior', points: 10 },
+      ],
+    },
+    {
+      section: '5) Developer quality',
+      totalPoints: 10,
+      criteria: [
+        { item: 'Clear code structure and logs', points: 5 },
+        { item: 'Clear explanation during demo', points: 5 },
+      ],
+    },
+  ]
+
+  const tieBreakers = [
+    'Better user experience',
+    'Better resilience handling',
+    'Better observability',
+  ]
+
   const toggleStep = (id: string) => {
     setCompletedSteps((previous) => {
       const next = new Set(previous)
@@ -281,6 +423,50 @@ function App() {
       setCopiedDetailKey(null)
     }
   }
+
+  const copyPromptStarter = async () => {
+    try {
+      await navigator.clipboard.writeText(promptStarterTemplate)
+      setCopiedPromptStarter(true)
+      window.setTimeout(() => setCopiedPromptStarter(false), 1500)
+    } catch {
+      setCopiedPromptStarter(false)
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false
+
+    const renderRuntimeFlow = async () => {
+      try {
+        const mermaidModule = await import('mermaid')
+        const mermaid = mermaidModule.default
+
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: 'loose',
+          theme: 'base',
+        })
+
+        const { svg } = await mermaid.render(`runtime-flow-${Date.now()}`, runtimeFlowMermaid)
+        if (!cancelled) {
+          setRuntimeFlowSvg(svg)
+          setRuntimeFlowError(null)
+        }
+      } catch {
+        if (!cancelled) {
+          setRuntimeFlowSvg('')
+          setRuntimeFlowError('Unable to render Mermaid SVG in-browser. You can still copy the source below.')
+        }
+      }
+    }
+
+    void renderRuntimeFlow()
+
+    return () => {
+      cancelled = true
+    }
+  }, [runtimeFlowMermaid])
 
   useEffect(() => {
     if (progress === 100 && !hasCelebratedCompletion.current) {
@@ -416,33 +602,35 @@ function App() {
           </div>
         </section>
 
-        <section id="repo" className="surface repo-section">
-          <div className="surface-head">
-            <h3>Workshop Repository</h3>
-          </div>
-          <p className="repo-text">
-            Start by forking the workshop repository into your own GitHub account so each team can iterate independently.
-          </p>
-          <a
-            className="repo-link"
-            href="https://github.com/mangoshindig/twilio-iu-tech-summit-forge"
-            target="_blank"
-            rel="noreferrer"
-            title="Opens in a new tab"
-            aria-label="Fork the workshop repository (opens in a new tab)"
-          >
-            Fork this repo
-            <FiExternalLink />
-            <span className="link-meta">https://github.com/mangoshindig/twilio-iu-tech-summit-forge</span>
-          </a>
-        </section>
+        <section className="meta-grid">
+          <section id="repo" className="surface repo-section">
+            <div className="surface-head">
+              <h3>Workshop Repository</h3>
+            </div>
+            <p className="repo-text">
+              Fork this repo to get started
+            </p>
+            <a
+              className="repo-link"
+              href="https://github.com/mangoshindig/twilio-iu-tech-summit-forge"
+              target="_blank"
+              rel="noreferrer"
+              title="Opens in a new tab"
+              aria-label="Fork the workshop repository (opens in a new tab)"
+            >
+              Fork this repo
+              <FiExternalLink />
+              <span className="link-meta">https://github.com/mangoshindig/twilio-iu-tech-summit-forge</span>
+            </a>
+          </section>
 
-        <section id="account" className="surface account-section">
-          <div className="surface-head">
-            <h3>Twilio Account SID</h3>
-          </div>
+          <section id="account" className="surface account-section">
+            <div className="surface-head">
+              <h3>Twilio Account SID</h3>
+            </div>
 
-          <p className="repo-text"><strong>Current SID:</strong> {WORKSHOP_TWILIO_ACCOUNT_SID}</p>
+            <p className="repo-text"><strong>Current SID:</strong> {WORKSHOP_TWILIO_ACCOUNT_SID}</p>
+          </section>
         </section>
 
         <section className="content-grid">
@@ -450,6 +638,7 @@ function App() {
             <div className="surface-head">
               <h3>Track selector</h3>
             </div>
+            <p className="module-intro">Choose the language your team wants to develop in for the workshop implementation.</p>
             <div className="track-switcher">
               <button className={selectedTrack === 'python' ? 'selected' : ''} type="button" onClick={() => setSelectedTrack('python')}>
                 <FiCommand /> Python
@@ -497,6 +686,9 @@ function App() {
               <h3>Setup checklist</h3>
               <span>{doneCount}/{totalSteps}</span>
             </div>
+            <p className="module-intro">
+              Once you have forked the workshop repository, follow this checklist to complete setup and get your team ready to build.
+            </p>
             <div className="checklist">
               {checklist.map((item) => {
                 const done = completedSteps.has(item.id)
@@ -564,6 +756,27 @@ function App() {
             </div>
           </section>
 
+          <section id="runtime-flow" className="surface span-two narrative">
+            <div className="surface-head">
+              <h3>Starter runtime flow</h3>
+            </div>
+            <p className="module-intro">
+              Status map for current starter implementation.
+              <span className="flow-legend-chip done">Done</span>
+              <span className="flow-legend-chip todo">TODO</span>
+              <span className="flow-legend-chip ext">External</span>
+            </p>
+            <div className="flow-svg-wrap" aria-live="polite">
+              {runtimeFlowError ? (
+                <p className="flow-render-note">{runtimeFlowError}</p>
+              ) : runtimeFlowSvg ? (
+                <div className="flow-svg" dangerouslySetInnerHTML={{ __html: runtimeFlowSvg }} />
+              ) : (
+                <p className="flow-render-note">Rendering diagram...</p>
+              )}
+            </div>
+          </section>
+
           <section id="modules" className="surface span-two narrative">
             <div className="surface-head">
               <h3>Twilio Conversations modules</h3>
@@ -619,6 +832,70 @@ function App() {
                   </a>
                 </article>
               ))}
+            </div>
+
+          </section>
+
+          <section id="prompt-starter" className="surface span-two narrative">
+            <div className="surface-head">
+              <h3>Prompt and personality starter</h3>
+            </div>
+            <p className="module-intro">
+              Unsure of where to start with giving your agent a personality? Use this template as your system prompt or instruction layer, then tailor it for your team use case.
+            </p>
+            <div className="prompt-starter-block">
+              <pre>{promptStarterTemplate}</pre>
+              <button type="button" className="copy-command-btn" onClick={copyPromptStarter}>
+                {copiedPromptStarter ? 'Copied' : 'Copy prompt starter'}
+              </button>
+            </div>
+          </section>
+
+          <section id="playbook" className="surface span-two narrative">
+            <div className="surface-head">
+              <h3>Common issues</h3>
+            </div>
+            <p className="module-intro">Fast troubleshooting for the issues that most often block teams during build time.</p>
+            <div className="playbook-grid">
+              {troubleshootingPlaybook.map((item) => (
+                <article key={item.issue} className="playbook-card">
+                  <h4>{item.issue}</h4>
+                  <p>{item.fix}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section id="judging" className="surface span-two">
+            <div className="surface-head">
+              <h3>Judging criteria</h3>
+            </div>
+            <p className="module-intro">Total score: 100 points</p>
+            <div className="rubric-sections" aria-label="Judging rubric sections">
+              {judgingRubric.map((section) => (
+                <article key={section.section} className="rubric-section-card">
+                  <div className="rubric-section-head">
+                    <h4>{section.section}</h4>
+                    <span>{section.totalPoints} points</span>
+                  </div>
+                  <ul className="rubric-criteria-list">
+                    {section.criteria.map((criterion) => (
+                      <li key={criterion.item}>
+                        <span>{criterion.item}</span>
+                        <strong>{criterion.points}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+            <div className="rubric-tiebreakers" aria-label="Tie-breakers">
+              <h4>Tie-breakers</h4>
+              <ul>
+                {tieBreakers.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </div>
           </section>
         </section>
