@@ -93,13 +93,13 @@ function App() {
           linkHref: twilioConsoleLink('settings/us1/api-keys/list'),
         },
         {
-          text: 'Get this value from',
+          text: 'Get this value (team-specific) from',
           chips: ['TWILIO_PHONE_NUMBER'],
           linkLabel: 'Twilio Console -> Phone Numbers -> Active numbers',
           linkHref: twilioConsoleLink('phone-numbers/manage/incoming'),
         },
         {
-          text: 'Get this value when you create a new configuration at',
+          text: 'Get this value when you create a new configuration (ONE CONFIGURATION PER TEAM) at',
           chips: ['TWILIO_CONVERSATION_CONFIGURATION_ID'],
           linkLabel: 'Twilio Conversations Agent Connect setup',
           linkHref: twilioConsoleLink('us1/conversation-orchestrator/overview'),
@@ -142,7 +142,7 @@ function App() {
           linkLabel: 'Twilio Console -> Conversations Agent Connect setup',
           linkHref: twilioConsoleLink('us1/conversation-orchestrator/overview'),
         },
-        { text: 'Set the Messaging webhook on the Conversation Configuration to <NGROK_URL>/webhook.' },
+        { text: 'Set the webhook on the Conversation Configuration to <NGROK_URL>/webhook.' },
         { text: 'Map the workshop phone number to that Conversation Configuration.' },
         {
           text: 'Open your new phone number in the Twilio Console.',
