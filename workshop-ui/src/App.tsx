@@ -67,8 +67,8 @@ function App() {
       label: 'German mobile number provisioned in Twilio Console',
       details: [
         {
-          text: 'Buy a German mobile number',
-          linkLabel: 'Twilio Console -> Buy a number',
+          text: 'Find your team\'s German mobile number',
+          linkLabel: 'Twilio Console -> Phone Numbers',
           linkHref: twilioConsoleLink('us1/senders-hub/list/phone-numbers/inventory'),
         },
         { text: 'Confirm the number appears under Active numbers before continuing.' },
