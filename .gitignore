@@ -5,3 +5,6 @@ node_modules/
 __pycache__/
 *.pyc
 .DS_Store
+/workshop-ui/dist
+workshop-ui/src/config.ts
+workshop-ui/src/config.ts

@@ -101,7 +101,7 @@ function App() {
         {
           text: 'Get this value when you create a new configuration (ONE CONFIGURATION PER TEAM) at',
           chips: ['TWILIO_CONVERSATION_CONFIGURATION_ID'],
-          linkLabel: 'Twilio Conversations Agent Connect setup',
+          linkLabel: 'Twilio Conversation Orchestrator',
           linkHref: twilioConsoleLink('us1/conversation-orchestrator/overview'),
         },
         {
@@ -139,7 +139,7 @@ function App() {
       details: [
         {
           text: 'Open your Conversation Configuration in the Twilio Console.',
-          linkLabel: 'Twilio Console -> Conversations Agent Connect setup',
+          linkLabel: 'Twilio Console -> Conversation Orchestrator',
           linkHref: twilioConsoleLink('us1/conversation-orchestrator/overview'),
         },
         { text: 'Set the webhook on the Conversation Configuration to <NGROK_URL>/webhook.' },
